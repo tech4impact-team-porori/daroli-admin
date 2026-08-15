@@ -50,6 +50,11 @@ export function sumSettlements(settlements: Settlement[]): Won {
   return settlements.reduce((sum, s) => sum + s.amount, 0)
 }
 
+/** 임의의 목록에서 금액 필드를 뽑아 합산 — 표 하단 합계 행 등에 공용으로 사용 */
+export function sumWon<T>(items: T[], amount: (item: T) => Won): Won {
+  return items.reduce((sum, item) => sum + amount(item), 0)
+}
+
 /** 지급 완료된 출금 합계 = 기획서의 "지급 완료액" */
 export function sumPaidPayouts(payouts: Payout[]): Won {
   return payouts

@@ -16,6 +16,7 @@ import {
   sumPaidPayouts,
   sumRequestedPayouts,
   sumSettlements,
+  sumWon,
 } from './calc'
 import { ACTIVITY_TYPE, LOG_STATUS, PAYOUT_STATUS, SETTLEMENT_STATUS } from './status'
 import type { ActivityLog, Payout, RegionStat, Settings, Settlement } from './types'
@@ -141,6 +142,17 @@ describe('sumSettlements', () => {
       makeSettlement({ id: 's2', status: SETTLEMENT_STATUS.CALCULATED, amount: 50000 }),
     ]
     expect(sumSettlements(settlements)).toBe(150000)
+  })
+})
+
+describe('sumWon', () => {
+  it('임의의 금액 필드를 뽑아 합산한다', () => {
+    const rows = [{ balance: 10000 }, { balance: 20000 }, { balance: 5000 }]
+    expect(sumWon(rows, (r) => r.balance)).toBe(35000)
+  })
+
+  it('빈 배열은 0을 반환한다', () => {
+    expect(sumWon([], (r: { balance: number }) => r.balance)).toBe(0)
   })
 })
 
