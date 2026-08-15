@@ -91,18 +91,12 @@ export interface DataSource {
 
 /**
  * 실제 사용처.
- * Phase 2에서 mock.ts 를 만들고 여기 연결합니다.
+ * 나중: real.ts 가 생기면 환경변수로 전환합니다.
  *
- *   import { mockDataSource } from './mock'
  *   import { realDataSource } from './real'
  *   export const db: DataSource =
  *     process.env.NEXT_PUBLIC_USE_REAL_DB === 'true' ? realDataSource : mockDataSource
  */
-export const db: DataSource = new Proxy({} as DataSource, {
-  get(_target, prop) {
-    throw new Error(
-      `[lib/data] db.${String(prop)}() 를 불렀지만 아직 데이터 소스가 연결되지 않았습니다.\n` +
-        `Phase 2에서 lib/data/mock.ts 를 만들고 lib/data/index.ts 의 db 를 교체하세요.`,
-    )
-  },
-})
+import { mockDataSource } from './mock'
+
+export const db: DataSource = mockDataSource
