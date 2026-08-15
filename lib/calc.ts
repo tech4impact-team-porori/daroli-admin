@@ -45,6 +45,11 @@ export function sumApprovedSettlements(settlements: Settlement[]): Won {
     .reduce((sum, s) => sum + s.amount, 0)
 }
 
+/** 상태 무관 정산 총액 — 활동비 관리 화면 "해당 월 산정 총액" 요약 카드용 */
+export function sumSettlements(settlements: Settlement[]): Won {
+  return settlements.reduce((sum, s) => sum + s.amount, 0)
+}
+
 /** 지급 완료된 출금 합계 = 기획서의 "지급 완료액" */
 export function sumPaidPayouts(payouts: Payout[]): Won {
   return payouts

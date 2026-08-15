@@ -15,6 +15,7 @@ import {
   sumApprovedSettlements,
   sumPaidPayouts,
   sumRequestedPayouts,
+  sumSettlements,
 } from './calc'
 import { ACTIVITY_TYPE, LOG_STATUS, PAYOUT_STATUS, SETTLEMENT_STATUS } from './status'
 import type { ActivityLog, Payout, RegionStat, Settings, Settlement } from './types'
@@ -130,6 +131,16 @@ describe('sumApprovedSettlements / sumPaidPayouts / sumRequestedPayouts', () => 
     expect(sumApprovedSettlements([])).toBe(0)
     expect(sumPaidPayouts([])).toBe(0)
     expect(sumRequestedPayouts([])).toBe(0)
+  })
+})
+
+describe('sumSettlements', () => {
+  it('상태와 무관하게 전부 합산한다', () => {
+    const settlements = [
+      makeSettlement({ id: 's1', status: SETTLEMENT_STATUS.APPROVED, amount: 100000 }),
+      makeSettlement({ id: 's2', status: SETTLEMENT_STATUS.CALCULATED, amount: 50000 }),
+    ]
+    expect(sumSettlements(settlements)).toBe(150000)
   })
 })
 

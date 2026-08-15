@@ -3,19 +3,11 @@
 import { useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 
+import { RejectDialog } from "@/components/reject-dialog"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -46,7 +38,6 @@ export default function ReviewPage() {
 
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ActivityLogCard | null>(null)
-  const [rejectReason, setRejectReason] = useState("")
   const [rejectSubmitting, setRejectSubmitting] = useState(false)
 
   useEffect(() => {
@@ -117,13 +108,12 @@ export default function ReviewPage() {
     }
   }
 
-  async function handleRejectConfirm() {
-    if (!rejectTarget || !rejectReason.trim()) return
+  async function handleRejectConfirm(reason: string) {
+    if (!rejectTarget) return
     setRejectSubmitting(true)
     try {
-      await db.rejectLog(rejectTarget.id, rejectReason.trim())
+      await db.rejectLog(rejectTarget.id, reason)
       setRejectTarget(null)
-      setRejectReason("")
       fetchLogs()
     } catch (err) {
       setError(err instanceof Error ? err.message : "반려 처리 중 오류가 발생했습니다")
@@ -221,60 +211,27 @@ export default function ReviewPage() {
                 log={log}
                 pending={pendingActionId === log.id}
                 onApprove={() => handleApprove(log)}
-                onReject={() => {
-                  setRejectTarget(log)
-                  setRejectReason("")
-                }}
+                onReject={() => setRejectTarget(log)}
               />
             ))}
           </div>
         </>
       )}
 
-      <Dialog
+      <RejectDialog
         open={rejectTarget !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setRejectTarget(null)
-            setRejectReason("")
-          }
+          if (!open) setRejectTarget(null)
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>일지 반려</DialogTitle>
-            <DialogDescription>
-              {rejectTarget
-                ? `${rejectTarget.recipientName} · ${rejectTarget.activityDate} 일지를 반려합니다. 사유는 필수입니다.`
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="반려 사유를 입력하세요"
-            autoFocus
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setRejectTarget(null)
-                setRejectReason("")
-              }}
-            >
-              취소
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={!rejectReason.trim() || rejectSubmitting}
-              onClick={handleRejectConfirm}
-            >
-              반려
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="일지 반려"
+        description={
+          rejectTarget
+            ? `${rejectTarget.recipientName} · ${rejectTarget.activityDate} 일지를 반려합니다. 사유는 필수입니다.`
+            : ""
+        }
+        submitting={rejectSubmitting}
+        onConfirm={handleRejectConfirm}
+      />
     </div>
   )
 }
