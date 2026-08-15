@@ -333,7 +333,7 @@ function buildLogs(): ActivityLog[] {
         const photoCount = globalIndex % 3
         const photos = Array.from({ length: photoCount }, (_, i) => ({
           id: `photo-${globalIndex}-${i}`,
-          url: `https://placehold.co/400x300?text=활동사진`,
+          url: `https://placehold.co/400x300?text=Photo+${globalIndex}-${i}`,
         }))
 
         logs.push({
@@ -409,7 +409,7 @@ function buildSettlements(unitPrice: Won): Settlement[] {
 
 const UNIT_PRICE = 25000
 
-let settlements: Settlement[] = buildSettlements(UNIT_PRICE)
+const settlements: Settlement[] = buildSettlements(UNIT_PRICE)
 
 // ═════════════════════════════════════════════════════════════
 // 출금 — 매니저별 승인 정산 총액의 일부만 신청/지급 (잔액 항상 0 이상 유지)
@@ -480,7 +480,7 @@ function buildPayouts(): Payout[] {
   return payouts
 }
 
-let payouts: Payout[] = buildPayouts()
+const payouts: Payout[] = buildPayouts()
 
 // ═════════════════════════════════════════════════════════════
 // 시스템 설정
