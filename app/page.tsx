@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts"
 
+import { RegionMap } from "@/components/region-map"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -254,7 +255,11 @@ function ManagersTab({ data }: { data: DashboardData }) {
         </CardContent>
       </Card>
 
-      <MapPlaceholder />
+      <Card>
+        <CardContent>
+          <RegionMap regions={data.regions} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent>
@@ -350,7 +355,11 @@ function RecipientsTab({ data }: { data: DashboardData }) {
         </CardContent>
       </Card>
 
-      <MapPlaceholder />
+      <Card>
+        <CardContent>
+          <RegionMap regions={data.regions} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent>
@@ -412,14 +421,6 @@ function RegionTable({ data, columns }: { data: DashboardData; columns: "manager
         ))}
       </TableBody>
     </Table>
-  )
-}
-
-function MapPlaceholder() {
-  return (
-    <div className="flex items-center justify-center rounded-xl border border-dashed border-border py-12 text-sm text-muted-foreground">
-      통합 지역 지도는 청도군 GeoJSON 준비 후 추가됩니다 (Phase 8)
-    </div>
   )
 }
 
