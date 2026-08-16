@@ -86,9 +86,6 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">설정</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          모든 금액 계산이 이 값을 참조합니다. 단가를 바꾸면 미승인 건의 산정액이 전부 바뀝니다.
-        </p>
       </div>
 
       {error && (

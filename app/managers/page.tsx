@@ -98,9 +98,6 @@ export default function ManagersPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">매니저 관리</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          활동 가능(active) 상태부터 요청 배정과 활동일지 작성이 가능합니다.
-        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

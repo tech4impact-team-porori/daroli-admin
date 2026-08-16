@@ -85,9 +85,6 @@ export default function RequestsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">요청 현황</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          전체 요청 흐름을 지켜보는 관제 화면입니다. 여기서 직접 처리하지는 않습니다.
-        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

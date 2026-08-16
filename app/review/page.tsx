@@ -126,9 +126,6 @@ export default function ReviewPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">일지 검토</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          검토 대기 건부터 오래된 순으로 표시됩니다. 반려에는 사유가 필요합니다.
-        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

@@ -165,9 +165,6 @@ export default function PaymentsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">활동비 관리</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            일지 승인과 정산 승인은 별개입니다. 정산 승인 시점에 매니저 잔액이 적립됩니다.
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Select

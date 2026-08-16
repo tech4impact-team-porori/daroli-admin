@@ -242,9 +242,6 @@ export default function RecipientsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">대상자 관리</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            담당 매니저 배정 정보가 지역별 매니저 부족 판정의 기준이 됩니다.
-          </p>
         </div>
         <Button onClick={openCreate}>신규 등록</Button>
       </div>
