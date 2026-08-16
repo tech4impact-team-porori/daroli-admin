@@ -26,21 +26,12 @@ import { formatWon, sumSettlements } from "@/lib/calc"
 import { db } from "@/lib/data"
 import { PAYOUT_STATUS, SETTLEMENT_STATUS, SETTLEMENT_STATUS_META } from "@/lib/status"
 import type { PayoutRow, SettlementRow, YearMonth } from "@/lib/types"
+import { lastNMonths } from "@/lib/utils"
 
 const MONTH_COUNT = 6
 
-function lastMonths(n: number): YearMonth[] {
-  const now = new Date()
-  const out: YearMonth[] = []
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
-  }
-  return out
-}
-
 export default function PaymentsPage() {
-  const months = useMemo(() => lastMonths(MONTH_COUNT), [])
+  const months = useMemo(() => lastNMonths(MONTH_COUNT), [])
   const [selectedMonth, setSelectedMonth] = useState<YearMonth>(months[months.length - 1])
 
   const [settlements, setSettlements] = useState<SettlementRow[] | null>(null)
