@@ -861,7 +861,13 @@ export const mockDataSource: DataSource = {
     return requests
       .filter((r) => (filter.status ? r.status === filter.status : true))
       .map(toCareRequestRow)
-      .filter((r) => (keyword ? r.recipientName.toLowerCase().includes(keyword) : true))
+      .filter((r) =>
+        keyword
+          ? r.recipientName.toLowerCase().includes(keyword) ||
+            (r.managerName?.toLowerCase().includes(keyword) ?? false) ||
+            (r.note?.toLowerCase().includes(keyword) ?? false)
+          : true,
+      )
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   },
 
