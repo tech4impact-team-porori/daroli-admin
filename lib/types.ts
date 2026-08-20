@@ -369,7 +369,45 @@ export interface ManagerPaymentRow {
   balance: Won
 }
 
-/** 대시보드 3탭 전체 */
+/**
+ * 🟨 대시보드 "지금 처리할 일" 액션 큐 — docs/대시보드_재설계.md 4장·7장 (Phase 13)
+ * 전부 기존 데이터에서 계산 가능. 판정 로직은 lib/calc.ts 에만 둔다.
+ */
+export interface ActionQueue {
+  /** 1. 승인됐지만 아직 안 나간 돈 (BudgetSummary.approvedUnpaid 와 동일) */
+  approvedUnpaid: Won
+  /** 2. 출금 신청 대기 건수 */
+  requestedPayoutCount: number
+  /** 3. 검토 대기 일지 건수 (DashboardData.pendingLogCount 와 동일) */
+  pendingLogCount: number
+  /** 3. 가장 오래된 pending 일지의 경과 일수 */
+  oldestPendingDays: number
+  /** 4. requested 상태이면서 접수 후 24시간 경과한 요청 건수 */
+  staleRequestCount: number
+  /** 5. 매니저 심사 대기 인원 (applied + educated) */
+  pendingManagerCount: number
+  /** 6. 담당 매니저가 없는 대상자 수 */
+  unassignedRecipientCount: number
+  /** 7. 매니저 부족 지역 목록 */
+  shortageRegions: Region[]
+  /** 8. 이번 달 배정 예산 미설정 여부 */
+  needsBudgetSetup: boolean
+
+  // ── 신규 (detail 표시 전용, Phase 13-1) ──
+  /** 🟨 1. 잔액(=승인 미지급)이 남아 있는 매니저 수 */
+  unpaidManagerCount: number
+  /** 🟨 2. requested 상태 출금 중 가장 오래된 건의 경과 일수. 없으면 0 */
+  oldestRequestedPayoutDays: number
+  /** 🟨 5. 심사 대기 인원의 단계별 분해 (applied / educated) */
+  appliedManagerCount: number
+  educatedManagerCount: number
+  /** 🟨 6. 미배정 대상자의 읍·면 분해. count 내림차순 */
+  unassignedByRegion: { region: Region; count: number }[]
+  /** 🟨 8. 배정 예산이 미설정된 대상 월 */
+  budgetSetupMonth: YearMonth
+}
+
+/** 대시보드 전체 */
 export interface DashboardData {
   /** 공통 상단 배너 — 검토 대기 일지 건수 */
   pendingLogCount: number
@@ -387,6 +425,9 @@ export interface DashboardData {
   trend: MonthlyTrendPoint[]
 
   regions: RegionStat[]
+
+  /** "지금 처리할 일" 액션 큐 — docs/대시보드_재설계.md (Phase 13) */
+  actions: ActionQueue
 }
 
 // ═════════════════════════════════════════════════════════════

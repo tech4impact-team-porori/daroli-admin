@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 
+import { RegionMap, type RegionMapMetric } from "@/components/region-map"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -26,9 +28,11 @@ import {
 import { formatWon, sumWon } from "@/lib/calc"
 import { db } from "@/lib/data"
 import { CHEONGDO_REGIONS, MANAGER_STATUS, MANAGER_STATUS_META } from "@/lib/status"
-import type { ManagerStatus, ManagerWithStats, Region } from "@/lib/types"
+import type { ManagerStatus, ManagerWithStats, Region, RegionStat } from "@/lib/types"
+import { lastNMonths } from "@/lib/utils"
 
 const ALL = "all"
+const CURRENT_MONTH = lastNMonths(1)[0]
 
 export default function ManagersPage() {
   const [keyword, setKeyword] = useState("")
@@ -38,6 +42,10 @@ export default function ManagersPage() {
   const [managers, setManagers] = useState<ManagerWithStats[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [actionId, setActionId] = useState<string | null>(null)
+
+  const [regions, setRegions] = useState<RegionStat[] | null>(null)
+  const [regionsError, setRegionsError] = useState<string | null>(null)
+  const [mapMetric, setMapMetric] = useState<RegionMapMetric>("demand")
 
   function fetchManagers() {
     setError(null)
@@ -58,6 +66,21 @@ export default function ManagersPage() {
     fetchManagers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [regionFilter, statusFilter])
+
+  function fetchRegions() {
+    setRegionsError(null)
+    setRegions(null)
+    db.getRegionStats(CURRENT_MONTH)
+      .then(setRegions)
+      .catch((err: unknown) =>
+        setRegionsError(err instanceof Error ? err.message : "지역별 현황을 불러오지 못했습니다"),
+      )
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 최초 진입 시 1회 조회
+    fetchRegions()
+  }, [])
 
   async function handleStatusChange(manager: ManagerWithStats, next: ManagerStatus) {
     setActionId(manager.id)
@@ -99,6 +122,15 @@ export default function ManagersPage() {
       <div>
         <h1 className="text-2xl font-bold">매니저 관리</h1>
       </div>
+
+      <RegionSection
+        id="region-map"
+        regions={regions}
+        error={regionsError}
+        onRetry={fetchRegions}
+        metric={mapMetric}
+        onMetricChange={setMapMetric}
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <Input
@@ -234,6 +266,110 @@ export default function ManagersPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════
+// 지역별 현황 — 지도 + 표 (기획서 2-9, Phase 14: 대시보드에서 이동)
+// ═════════════════════════════════════════════════════════════
+
+function RegionSection({
+  id,
+  regions,
+  error,
+  onRetry,
+  metric,
+  onMetricChange,
+}: {
+  id: string
+  regions: RegionStat[] | null
+  error: string | null
+  onRetry: () => void
+  metric: RegionMapMetric
+  onMetricChange: (metric: RegionMapMetric) => void
+}) {
+  return (
+    <Card id={id}>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">지역별 현황</h2>
+          <Tabs value={metric} onValueChange={(v) => onMetricChange(v as RegionMapMetric)}>
+            <TabsList>
+              <TabsTrigger value="demand">수요 보기</TabsTrigger>
+              <TabsTrigger value="manager">매니저 보기</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {error && (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+            <p className="text-sm text-rose-700">{error}</p>
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              다시 시도
+            </Button>
+          </div>
+        )}
+
+        {!error && regions === null && (
+          <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+            <span className="mr-2 size-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+            불러오는 중...
+          </div>
+        )}
+
+        {!error && regions !== null && regions.length === 0 && (
+          <div className="flex items-center justify-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
+            표시할 지역이 없습니다
+          </div>
+        )}
+
+        {!error && regions !== null && regions.length > 0 && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <RegionMap regions={regions} metric={metric} />
+            <RegionTable regions={regions} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function RegionTable({ regions }: { regions: RegionStat[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>지역</TableHead>
+          <TableHead className="text-right">대상자 수</TableHead>
+          <TableHead className="text-right">활동가능 매니저</TableHead>
+          <TableHead className="text-right">배정 매니저</TableHead>
+          <TableHead className="text-right">이달 활동 수</TableHead>
+          <TableHead>부족 여부</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {regions.map((r) => (
+          <TableRow key={r.region}>
+            <TableCell>
+              <Badge variant="outline" className="text-xs">
+                {r.region}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right tabular-nums">{r.recipientCount}명</TableCell>
+            <TableCell className="text-right tabular-nums">{r.activeManagerCount}명</TableCell>
+            <TableCell className="text-right tabular-nums">{r.assignedManagerCount}명</TableCell>
+            <TableCell className="text-right tabular-nums">{r.monthlyLogCount}건</TableCell>
+            <TableCell>
+              {r.isShortage ? (
+                <StatusBadge label="도움 필요" tone="stop" />
+              ) : (
+                <StatusBadge label="양호" tone="done" />
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 

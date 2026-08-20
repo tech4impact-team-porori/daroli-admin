@@ -35,8 +35,18 @@ import {
   calcMonthlyBudgetSummary,
   calcSettlementAmount,
   isRegionShortage,
+  managerReviewBreakdown,
+  needsMonthlyBudgetSetup,
+  oldestPendingDays,
+  oldestRequestedPayoutDays,
+  pendingManagerCount,
+  shortageRegions,
+  staleRequestCount,
   sumApprovedSettlements,
   sumPaidPayouts,
+  unassignedRecipientCount,
+  unassignedRecipientsByRegion,
+  unpaidManagerCount,
 } from '../calc'
 import type {
   ActivityLog,
@@ -643,8 +653,12 @@ export const mockDataSource: DataSource = {
       approved: activityLogs.filter((l) => l.activityDate.startsWith(ym) && l.status === LOG_STATUS.APPROVED).length,
     }))
 
+    const pendingLogCount = activityLogs.filter((l) => l.status === LOG_STATUS.PENDING).length
+    const reviewBreakdown = managerReviewBreakdown(managers)
+    const now = new Date()
+
     const data: DashboardData = {
-      pendingLogCount: activityLogs.filter((l) => l.status === LOG_STATUS.PENDING).length,
+      pendingLogCount,
       budget,
       monthlyBudget,
       activeManagerCount: managers.filter((m) => m.status === MANAGER_STATUS.ACTIVE).length,
@@ -655,6 +669,23 @@ export const mockDataSource: DataSource = {
       monthlyLogTotal: activityLogs.filter((l) => l.activityDate.startsWith(yearMonth)).length,
       trend,
       regions,
+      actions: {
+        approvedUnpaid: budget.approvedUnpaid,
+        requestedPayoutCount: payouts.filter((p) => p.status === PAYOUT_STATUS.REQUESTED).length,
+        pendingLogCount,
+        oldestPendingDays: oldestPendingDays(activityLogs, now),
+        staleRequestCount: staleRequestCount(requests, now),
+        pendingManagerCount: pendingManagerCount(managers),
+        unassignedRecipientCount: unassignedRecipientCount(recipients),
+        shortageRegions: shortageRegions(regions),
+        needsBudgetSetup: needsMonthlyBudgetSetup(settings),
+        unpaidManagerCount: unpaidManagerCount(managers, settlements, payouts),
+        oldestRequestedPayoutDays: oldestRequestedPayoutDays(payouts, now),
+        appliedManagerCount: reviewBreakdown.applied,
+        educatedManagerCount: reviewBreakdown.educated,
+        unassignedByRegion: unassignedRecipientsByRegion(recipients),
+        budgetSetupMonth: yearMonth,
+      },
     }
     return data
   },

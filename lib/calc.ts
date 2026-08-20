@@ -16,12 +16,16 @@
  * 모든 금액은 정수(원). 나눗셈 결과는 반드시 Math.floor 로 내림합니다.
  */
 
-import { LOG_STATUS, PAYOUT_STATUS, SETTLEMENT_STATUS } from './status'
+import { LOG_STATUS, MANAGER_STATUS, PAYOUT_STATUS, REQUEST_STATUS, SETTLEMENT_STATUS } from './status'
 import type {
   ActivityLog,
   BudgetSummary,
+  CareRequest,
+  Manager,
   MonthlyBudgetSummary,
   Payout,
+  Recipient,
+  Region,
   RegionStat,
   Settlement,
   Settings,
@@ -184,6 +188,100 @@ export function calcMonthlyBudgetSummary(
 /** 🟦 배정 예산 미설정(0) 시 설정 페이지 안내 노출 (기획서 B-1 규칙) */
 export function needsMonthlyBudgetSetup(settings: Settings): boolean {
   return settings.monthlyBudget <= 0
+}
+
+// ═════════════════════════════════════════════════════════════
+// 대시보드 액션 큐 — docs/대시보드_재설계.md 4장 (Phase 13)
+// 판정 로직은 전부 여기. 화면에서 계산하지 않는다.
+// ═════════════════════════════════════════════════════════════
+
+/** 🟨 /requests 의 "배정 지연" 배지와 공유하는 기준. 두 곳에서 갈리면 숫자가 안 맞는다 */
+export const STALE_HOURS = 24
+
+/** 가장 오래된 pending 일지의 경과 일수. pending이 없으면 0 */
+export function oldestPendingDays(logs: ActivityLog[], now: Date): number {
+  const pending = logs.filter((l) => l.status === LOG_STATUS.PENDING)
+  if (pending.length === 0) return 0
+  const oldestCreatedAt = Math.min(...pending.map((l) => new Date(l.createdAt).getTime()))
+  return Math.floor((now.getTime() - oldestCreatedAt) / (1000 * 60 * 60 * 24))
+}
+
+/** requested 상태이면서 접수 후 STALE_HOURS 이상 경과한 요청 건수 */
+export function staleRequestCount(requests: CareRequest[], now: Date): number {
+  return requests.filter(
+    (r) =>
+      r.status === REQUEST_STATUS.REQUESTED &&
+      now.getTime() - new Date(r.createdAt).getTime() >= STALE_HOURS * 60 * 60 * 1000,
+  ).length
+}
+
+/** 매니저 심사 대기 인원 = applied + educated */
+export function pendingManagerCount(managers: Manager[]): number {
+  return managers.filter(
+    (m) => m.status === MANAGER_STATUS.APPLIED || m.status === MANAGER_STATUS.EDUCATED,
+  ).length
+}
+
+/**
+ * 잔액이 남아 있는 매니저 수 = 승인 미지급이 걸린 인원
+ * 🟨 매니저별 잔액은 기존 calcBalance() 재사용. 삭제된 매니저도 잔액이 있으면 포함
+ * (기획서: 삭제된 매니저도 지급 이력이 있으면 표에 유지)
+ */
+export function unpaidManagerCount(
+  managers: Manager[],
+  settlements: Settlement[],
+  payouts: Payout[],
+): number {
+  return managers.filter((m) => {
+    const balance = calcBalance(
+      settlements.filter((s) => s.managerId === m.id),
+      payouts.filter((p) => p.managerId === m.id),
+    )
+    return balance > 0
+  }).length
+}
+
+/** requested 상태 출금 중 가장 오래된 건의 경과 일수. 없으면 0 */
+export function oldestRequestedPayoutDays(payouts: Payout[], now: Date): number {
+  const requested = payouts.filter((p) => p.status === PAYOUT_STATUS.REQUESTED)
+  if (requested.length === 0) return 0
+  const oldestCreatedAt = Math.min(...requested.map((p) => new Date(p.createdAt).getTime()))
+  return Math.floor((now.getTime() - oldestCreatedAt) / (1000 * 60 * 60 * 24))
+}
+
+/** 심사 대기 인원 단계별 분해 */
+export function managerReviewBreakdown(managers: Manager[]): { applied: number; educated: number } {
+  return {
+    applied: managers.filter((m) => m.status === MANAGER_STATUS.APPLIED).length,
+    educated: managers.filter((m) => m.status === MANAGER_STATUS.EDUCATED).length,
+  }
+}
+
+/** 담당 매니저가 없는 대상자 수 (삭제된 대상자는 제외) */
+export function unassignedRecipientCount(recipients: Recipient[]): number {
+  return recipients.filter((r) => !r.deletedAt && !r.managerId).length
+}
+
+/**
+ * 미배정 대상자의 읍·면별 분해. count 내림차순 → 지역명 오름차순(동률 정렬 고정)
+ * 🟨 unassignedRecipientCount() 와 판정 조건이 반드시 같아야 한다 (!r.deletedAt && !r.managerId)
+ */
+export function unassignedRecipientsByRegion(
+  recipients: Recipient[],
+): { region: Region; count: number }[] {
+  const counts = new Map<Region, number>()
+  for (const r of recipients) {
+    if (r.deletedAt || r.managerId) continue
+    counts.set(r.region, (counts.get(r.region) ?? 0) + 1)
+  }
+  return Array.from(counts.entries())
+    .map(([region, count]) => ({ region, count }))
+    .sort((a, b) => b.count - a.count || a.region.localeCompare(b.region, 'ko'))
+}
+
+/** 매니저 부족 지역 이름 목록 */
+export function shortageRegions(regions: RegionStat[]): Region[] {
+  return regions.filter((r) => r.isShortage).map((r) => r.region)
 }
 
 // ═════════════════════════════════════════════════════════════

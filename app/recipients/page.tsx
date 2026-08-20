@@ -391,7 +391,7 @@ export default function RecipientsPage() {
                           className="text-muted-foreground hover:underline"
                           onClick={() => toggleReveal(setRevealedCareNeeds, r.id)}
                         >
-                          ●●●● 보기
+                          돌봄 필요사항 보기
                         </button>
                       )}
                     </TableCell>

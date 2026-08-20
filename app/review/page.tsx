@@ -102,7 +102,7 @@ export default function ReviewPage() {
       await db.approveLog(log.id)
       fetchLogs()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "승인 처리 중 오류가 발생했습니다")
+      setError(err instanceof Error ? err.message : "승인하지 못했습니다")
     } finally {
       setPendingActionId(null)
     }
@@ -116,7 +116,7 @@ export default function ReviewPage() {
       setRejectTarget(null)
       fetchLogs()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "반려 처리 중 오류가 발생했습니다")
+      setError(err instanceof Error ? err.message : "반려하지 못했습니다")
     } finally {
       setRejectSubmitting(false)
     }

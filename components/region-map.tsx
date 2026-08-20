@@ -19,15 +19,19 @@ function fillColor(intensity: number) {
   return `rgb(${r}, ${g}, ${b})`
 }
 
+/** 지도 채움색 기준 — 수요 보기(대상자 수) / 매니저 보기(활동가능 매니저 수) */
+export type RegionMapMetric = "demand" | "manager"
+
 /**
- * 통합 지역 지도 (기획서 2-9) — 대시보드 탭2·탭3 공용 컴포넌트
- * 채움색 = 거주 대상자 수, 붉은 테두리 = 매니저 부족 지역
+ * 통합 지역 지도 (기획서 2-9) — `/managers` 화면 전용 (Phase 14)
+ * 채움색 = metric 에 따라 대상자 수 또는 활동가능 매니저 수, 붉은 테두리 = 매니저 부족 지역
  */
-export function RegionMap({ regions }: { regions: RegionStat[] }) {
+export function RegionMap({ regions, metric }: { regions: RegionStat[]; metric: RegionMapMetric }) {
   const [hovered, setHovered] = useState<{ region: string; x: number; y: number } | null>(null)
 
   const byName = new Map(regions.map((r) => [r.region as string, r]))
   const maxRecipients = Math.max(...regions.map((r) => r.recipientCount), 0)
+  const maxActiveManagers = Math.max(...regions.map((r) => r.activeManagerCount), 0)
   const hoveredStat = hovered ? byName.get(hovered.region) : undefined
 
   return (
@@ -46,7 +50,14 @@ export function RegionMap({ regions }: { regions: RegionStat[] }) {
                 {geographies.map((geo) => {
                   const name = geo.properties.regionName as string
                   const stat = byName.get(name)
-                  const intensity = maxRecipients > 0 ? (stat?.recipientCount ?? 0) / maxRecipients : 0
+                  const intensity =
+                    metric === "demand"
+                      ? maxRecipients > 0
+                        ? (stat?.recipientCount ?? 0) / maxRecipients
+                        : 0
+                      : maxActiveManagers > 0
+                        ? (stat?.activeManagerCount ?? 0) / maxActiveManagers
+                        : 0
                   return (
                     <Geography
                       key={geo.rsmKey}
@@ -106,7 +117,7 @@ export function RegionMap({ regions }: { regions: RegionStat[] }) {
             className="inline-block h-3 w-10 rounded-sm"
             style={{ background: `linear-gradient(to right, ${fillColor(0)}, ${fillColor(1)})` }}
           />
-          <span>대상자 적음 → 많음</span>
+          <span>{metric === "demand" ? "대상자 적음 → 많음" : "매니저 적음 → 많음"}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="inline-block size-3 rounded-sm border-2 border-rose-600" />

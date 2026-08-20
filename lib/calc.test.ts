@@ -10,16 +10,43 @@ import {
   formatRate,
   formatWon,
   isRegionShortage,
+  managerReviewBreakdown,
   needsMonthlyBudgetSetup,
+  oldestPendingDays,
+  oldestRequestedPayoutDays,
+  pendingManagerCount,
   regionFillIntensity,
+  shortageRegions,
+  staleRequestCount,
   sumApprovedSettlements,
   sumPaidPayouts,
   sumRequestedPayouts,
   sumSettlements,
   sumWon,
+  unassignedRecipientCount,
+  unassignedRecipientsByRegion,
+  unpaidManagerCount,
 } from './calc'
-import { ACTIVITY_TYPE, LOG_STATUS, PAYOUT_STATUS, SETTLEMENT_STATUS } from './status'
-import type { ActivityLog, Payout, RegionStat, Settings, Settlement } from './types'
+import {
+  ACTIVITY_TYPE,
+  LOG_STATUS,
+  MANAGER_STATUS,
+  PAYOUT_STATUS,
+  RECIPIENT_TYPE,
+  REQUEST_STATUS,
+  REQUEST_TYPE,
+  SETTLEMENT_STATUS,
+} from './status'
+import type {
+  ActivityLog,
+  CareRequest,
+  Manager,
+  Payout,
+  Recipient,
+  RegionStat,
+  Settings,
+  Settlement,
+} from './types'
 
 // ═════════════════════════════════════════════════════════════
 // 픽스처 도우미
@@ -77,6 +104,46 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     monthlyBudget: 18_000_000,
     regionShortageThreshold: 3,
     updatedAt: '2026-08-01T09:00:00+09:00',
+    ...overrides,
+  }
+}
+
+function makeRequest(overrides: Partial<CareRequest> = {}): CareRequest {
+  return {
+    id: 'req-test',
+    recipientId: 'rcp-1',
+    requestType: REQUEST_TYPE.RIDING,
+    desiredAt: '2026-08-10T09:00:00+09:00',
+    isTimeFixed: false,
+    status: REQUEST_STATUS.REQUESTED,
+    createdAt: '2026-08-10T09:00:00+09:00',
+    ...overrides,
+  }
+}
+
+function makeManager(overrides: Partial<Manager> = {}): Manager {
+  return {
+    id: 'mgr-test',
+    name: '테스트매니저',
+    email: 'mgr@example.com',
+    phone: '010-0000-0000',
+    homeRegion: '청도읍',
+    activityRegions: ['청도읍'],
+    hasCar: true,
+    status: MANAGER_STATUS.ACTIVE,
+    createdAt: '2026-08-01T09:00:00+09:00',
+    ...overrides,
+  }
+}
+
+function makeRecipient(overrides: Partial<Recipient> = {}): Recipient {
+  return {
+    id: 'rcp-test',
+    name: '테스트대상자',
+    type: RECIPIENT_TYPE.ELDER,
+    region: '청도읍',
+    addressDetail: '청도읍 어딘가',
+    createdAt: '2026-08-01T09:00:00+09:00',
     ...overrides,
   }
 }
@@ -302,6 +369,230 @@ describe('needsMonthlyBudgetSetup', () => {
 
   it('배정 예산이 있으면 false다', () => {
     expect(needsMonthlyBudgetSetup(makeSettings({ monthlyBudget: 1 }))).toBe(false)
+  })
+})
+
+// ═════════════════════════════════════════════════════════════
+// 대시보드 액션 큐 (Phase 13)
+// ═════════════════════════════════════════════════════════════
+
+describe('oldestPendingDays', () => {
+  const now = new Date('2026-08-18T09:00:00+09:00')
+
+  it('pending 일지가 0건이면 0을 반환한다', () => {
+    const logs = [makeLog({ status: LOG_STATUS.APPROVED })]
+    expect(oldestPendingDays(logs, now)).toBe(0)
+  })
+
+  it('pending 일지 1건이면 그 건의 경과 일수를 반환한다', () => {
+    const logs = [
+      makeLog({ status: LOG_STATUS.PENDING, createdAt: '2026-08-15T09:00:00+09:00' }),
+    ]
+    expect(oldestPendingDays(logs, now)).toBe(3)
+  })
+
+  it('여러 pending 건 중 가장 오래된 것 기준으로 계산한다', () => {
+    const logs = [
+      makeLog({ id: 'l1', status: LOG_STATUS.PENDING, createdAt: '2026-08-16T09:00:00+09:00' }),
+      makeLog({ id: 'l2', status: LOG_STATUS.PENDING, createdAt: '2026-08-10T09:00:00+09:00' }),
+      makeLog({ id: 'l3', status: LOG_STATUS.APPROVED, createdAt: '2026-08-01T09:00:00+09:00' }),
+    ]
+    expect(oldestPendingDays(logs, now)).toBe(8)
+  })
+})
+
+describe('staleRequestCount', () => {
+  const now = new Date('2026-08-18T09:00:00+09:00')
+
+  it('경계 조건: 정확히 24시간 경과하면 지연으로 센다', () => {
+    const requests = [makeRequest({ createdAt: '2026-08-17T09:00:00+09:00' })]
+    expect(staleRequestCount(requests, now)).toBe(1)
+  })
+
+  it('경계 조건: 23시간 59분 경과하면 지연이 아니다', () => {
+    const requests = [makeRequest({ createdAt: '2026-08-17T09:01:00+09:00' })]
+    expect(staleRequestCount(requests, now)).toBe(0)
+  })
+
+  it('requested 상태가 아니면 아무리 오래돼도 세지 않는다', () => {
+    const requests = [
+      makeRequest({ status: REQUEST_STATUS.CONFIRMED, createdAt: '2026-08-01T09:00:00+09:00' }),
+    ]
+    expect(staleRequestCount(requests, now)).toBe(0)
+  })
+})
+
+describe('pendingManagerCount', () => {
+  it('applied + educated 인원을 합산한다', () => {
+    const managers = [
+      makeManager({ id: 'm1', status: MANAGER_STATUS.APPLIED }),
+      makeManager({ id: 'm2', status: MANAGER_STATUS.EDUCATED }),
+      makeManager({ id: 'm3', status: MANAGER_STATUS.ACTIVE }),
+      makeManager({ id: 'm4', status: MANAGER_STATUS.INACTIVE }),
+    ]
+    expect(pendingManagerCount(managers)).toBe(2)
+  })
+})
+
+describe('unpaidManagerCount', () => {
+  it('잔액이 남아 있는 매니저만 센다', () => {
+    const managers = [makeManager({ id: 'm1' }), makeManager({ id: 'm2' })]
+    const settlements = [
+      makeSettlement({ managerId: 'm1', status: SETTLEMENT_STATUS.APPROVED, amount: 100000 }),
+      makeSettlement({ managerId: 'm2', status: SETTLEMENT_STATUS.APPROVED, amount: 100000 }),
+    ]
+    const payouts = [makePayout({ managerId: 'm2', status: PAYOUT_STATUS.PAID, amount: 100000 })]
+    expect(unpaidManagerCount(managers, settlements, payouts)).toBe(1)
+  })
+
+  it('빈 매니저 목록이면 0이다', () => {
+    expect(unpaidManagerCount([], [], [])).toBe(0)
+  })
+
+  it('경계 조건: 잔액이 정확히 0인 매니저는 세지 않는다', () => {
+    const managers = [makeManager({ id: 'm1' })]
+    const settlements = [
+      makeSettlement({ managerId: 'm1', status: SETTLEMENT_STATUS.APPROVED, amount: 100000 }),
+    ]
+    const payouts = [makePayout({ managerId: 'm1', status: PAYOUT_STATUS.PAID, amount: 100000 })]
+    expect(unpaidManagerCount(managers, settlements, payouts)).toBe(0)
+  })
+
+  it('삭제된 매니저도 잔액이 남아 있으면 포함한다', () => {
+    const managers = [makeManager({ id: 'm1', deletedAt: '2026-08-01T09:00:00+09:00' })]
+    const settlements = [
+      makeSettlement({ managerId: 'm1', status: SETTLEMENT_STATUS.APPROVED, amount: 50000 }),
+    ]
+    expect(unpaidManagerCount(managers, settlements, [])).toBe(1)
+  })
+})
+
+describe('oldestRequestedPayoutDays', () => {
+  const now = new Date('2026-08-18T09:00:00+09:00')
+
+  it('requested 출금 중 가장 오래된 건의 경과 일수를 반환한다', () => {
+    const payouts = [
+      makePayout({ id: 'p1', status: PAYOUT_STATUS.REQUESTED, createdAt: '2026-08-13T09:00:00+09:00' }),
+      makePayout({ id: 'p2', status: PAYOUT_STATUS.REQUESTED, createdAt: '2026-08-16T09:00:00+09:00' }),
+    ]
+    expect(oldestRequestedPayoutDays(payouts, now)).toBe(5)
+  })
+
+  it('requested 건이 없으면 0이다', () => {
+    expect(oldestRequestedPayoutDays([], now)).toBe(0)
+  })
+
+  it('paid·rejected 출금은 무시한다', () => {
+    const payouts = [
+      makePayout({ status: PAYOUT_STATUS.PAID, createdAt: '2026-08-01T09:00:00+09:00' }),
+      makePayout({ status: PAYOUT_STATUS.REJECTED, createdAt: '2026-08-01T09:00:00+09:00' }),
+    ]
+    expect(oldestRequestedPayoutDays(payouts, now)).toBe(0)
+  })
+})
+
+describe('managerReviewBreakdown', () => {
+  it('applied·educated 인원을 단계별로 분해한다', () => {
+    const managers = [
+      makeManager({ id: 'm1', status: MANAGER_STATUS.APPLIED }),
+      makeManager({ id: 'm2', status: MANAGER_STATUS.APPLIED }),
+      makeManager({ id: 'm3', status: MANAGER_STATUS.EDUCATED }),
+      makeManager({ id: 'm4', status: MANAGER_STATUS.ACTIVE }),
+    ]
+    expect(managerReviewBreakdown(managers)).toEqual({ applied: 2, educated: 1 })
+  })
+
+  it('빈 목록이면 둘 다 0이다', () => {
+    expect(managerReviewBreakdown([])).toEqual({ applied: 0, educated: 0 })
+  })
+})
+
+describe('unassignedRecipientCount', () => {
+  it('담당 매니저가 없는 대상자만 센다', () => {
+    const recipients = [
+      makeRecipient({ id: 'r1', managerId: undefined }),
+      makeRecipient({ id: 'r2', managerId: 'mgr-1' }),
+    ]
+    expect(unassignedRecipientCount(recipients)).toBe(1)
+  })
+
+  it('삭제된 대상자는 미배정이어도 세지 않는다', () => {
+    const recipients = [
+      makeRecipient({ id: 'r1', managerId: undefined, deletedAt: '2026-08-01T09:00:00+09:00' }),
+    ]
+    expect(unassignedRecipientCount(recipients)).toBe(0)
+  })
+})
+
+describe('unassignedRecipientsByRegion', () => {
+  it('지역별로 묶어 count 내림차순으로 반환한다', () => {
+    const recipients = [
+      makeRecipient({ id: 'r1', region: '화양읍', managerId: undefined }),
+      makeRecipient({ id: 'r2', region: '화양읍', managerId: undefined }),
+      makeRecipient({ id: 'r3', region: '금천면', managerId: undefined }),
+    ]
+    expect(unassignedRecipientsByRegion(recipients)).toEqual([
+      { region: '화양읍', count: 2 },
+      { region: '금천면', count: 1 },
+    ])
+  })
+
+  it('빈 목록이면 빈 배열이다', () => {
+    expect(unassignedRecipientsByRegion([])).toEqual([])
+  })
+
+  it('삭제된 대상자는 제외한다', () => {
+    const recipients = [
+      makeRecipient({ id: 'r1', region: '청도읍', managerId: undefined, deletedAt: '2026-08-01T09:00:00+09:00' }),
+    ]
+    expect(unassignedRecipientsByRegion(recipients)).toEqual([])
+  })
+
+  it('경계 조건: count가 동률이면 지역명 오름차순으로 정렬한다', () => {
+    const recipients = [
+      makeRecipient({ id: 'r1', region: '풍각면', managerId: undefined }),
+      makeRecipient({ id: 'r2', region: '각남면', managerId: undefined }),
+    ]
+    expect(unassignedRecipientsByRegion(recipients)).toEqual([
+      { region: '각남면', count: 1 },
+      { region: '풍각면', count: 1 },
+    ])
+  })
+
+  it('합계가 unassignedRecipientCount 와 일치한다', () => {
+    const recipients = [
+      makeRecipient({ id: 'r1', region: '청도읍', managerId: undefined }),
+      makeRecipient({ id: 'r2', region: '청도읍', managerId: 'mgr-1' }),
+      makeRecipient({ id: 'r3', region: '화양읍', managerId: undefined }),
+      makeRecipient({ id: 'r4', region: '금천면', managerId: undefined, deletedAt: '2026-08-01T09:00:00+09:00' }),
+    ]
+    const byRegion = unassignedRecipientsByRegion(recipients)
+    const sum = byRegion.reduce((acc, r) => acc + r.count, 0)
+    expect(sum).toBe(unassignedRecipientCount(recipients))
+  })
+})
+
+describe('shortageRegions', () => {
+  it('isShortage 인 지역의 이름만 배열로 반환한다', () => {
+    const regions: RegionStat[] = [
+      {
+        region: '풍각면',
+        recipientCount: 5,
+        activeManagerCount: 0,
+        assignedManagerCount: 0,
+        monthlyLogCount: 0,
+        isShortage: true,
+      },
+      {
+        region: '청도읍',
+        recipientCount: 5,
+        activeManagerCount: 3,
+        assignedManagerCount: 3,
+        monthlyLogCount: 10,
+        isShortage: false,
+      },
+    ]
+    expect(shortageRegions(regions)).toEqual(['풍각면'])
   })
 })
 

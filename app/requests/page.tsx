@@ -22,12 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { STALE_HOURS } from "@/lib/calc"
 import { db } from "@/lib/data"
 import { REQUEST_STATUS, REQUEST_STATUS_META, REQUEST_TYPE_LABEL } from "@/lib/status"
 import type { CareRequestRow, RequestStatus } from "@/lib/types"
 
 const ALL = "all"
-const STALE_HOURS = 24
 
 export default function RequestsPage() {
   const [keyword, setKeyword] = useState("")
@@ -139,12 +139,6 @@ export default function RequestsPage() {
       {!error && requests !== null && requests.length > 0 && (
         <Card>
           <CardContent>
-            {staleIds.size > 0 && (
-              <p className="mb-3 text-xs text-amber-700">
-                <span className="font-medium">배정 지연</span> 배지가 붙은 건은 접수된 지 {STALE_HOURS}시간이
-                지나도록 시간 제안이 없습니다.
-              </p>
-            )}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -162,7 +156,11 @@ export default function RequestsPage() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <StatusBadge {...REQUEST_STATUS_META[r.status]} />
                         {staleIds.has(r.id) && (
-                          <Badge variant="outline" className="border-amber-300 bg-amber-100 text-xs text-amber-800">
+                          <Badge
+                            variant="outline"
+                            className="border-amber-300 bg-amber-100 text-xs text-amber-800"
+                            title={`접수 후 ${STALE_HOURS}시간 경과, 시간 제안 없음`}
+                          >
                             배정 지연
                           </Badge>
                         )}
