@@ -42,3 +42,4 @@ next-env.d.ts
 
 # 전국 행정동 GeoJSON 원본(34MB) — Phase 8에서 청도군만 잘라낸 파일만 커밋한다
 /HangJeongDong_ver20250701.geojson
+".claude/" 

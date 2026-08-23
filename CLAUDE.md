@@ -95,10 +95,11 @@ Recharts / react-simple-maps / TanStack Table / Zod
 
 ## 현재 상태
 
-기획서 2장의 10개 화면 전부 구현 완료 (Phase 1~9). **진행 중: Phase 13** — 대시보드(`/`)를
-3탭 구조에서 액션 큐 중심 단일 화면으로 재설계 (`docs/대시보드_재설계.md` B안, 팀 승인됨).
-지도(`components/region-map.tsx`)의 `/managers` 이동은 Phase 14로 분리, 이번 세션 대상 아님.
-상세 로드맵은 `다음단계.md` 참고.
+기획서 2장의 10개 화면 전부 구현 완료 (Phase 1~9). **Phase 13·14 완료** — 대시보드(`/`)를
+3탭 구조에서 액션 큐 중심 단일 화면으로 재설계했고(`docs/대시보드_재설계.md` B안, 팀 승인됨),
+지도(`components/region-map.tsx`)는 `/managers` 화면으로 이동해 "수요 보기/매니저 보기" 토글을
+추가했다 (커밋 `726adac`). **진행 중: Phase 15** — 코드와 문서를 맞추는 작업.
+상세 로드맵은 `다음단계.md`·`docs/운영투입_로드맵.md` 참고.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
