@@ -57,7 +57,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   name: "",
-  type: RECIPIENT_TYPE.ELDER,
+  type: RECIPIENT_TYPE.ELDERLY,
   age: "",
   region: "",
   addressDetail: "",
@@ -132,7 +132,7 @@ export default function RecipientsPage() {
   )
   const typeItems = {
     [ALL]: "전체 유형",
-    [RECIPIENT_TYPE.ELDER]: RECIPIENT_TYPE_META[RECIPIENT_TYPE.ELDER].label,
+    [RECIPIENT_TYPE.ELDERLY]: RECIPIENT_TYPE_META[RECIPIENT_TYPE.ELDERLY].label,
     [RECIPIENT_TYPE.CHILD]: RECIPIENT_TYPE_META[RECIPIENT_TYPE.CHILD].label,
   }
   const formManagerItems = useMemo(
@@ -147,7 +147,7 @@ export default function RecipientsPage() {
     [],
   )
   const formTypeItems = {
-    [RECIPIENT_TYPE.ELDER]: RECIPIENT_TYPE_META[RECIPIENT_TYPE.ELDER].label,
+    [RECIPIENT_TYPE.ELDERLY]: RECIPIENT_TYPE_META[RECIPIENT_TYPE.ELDERLY].label,
     [RECIPIENT_TYPE.CHILD]: RECIPIENT_TYPE_META[RECIPIENT_TYPE.CHILD].label,
   }
 

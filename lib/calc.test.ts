@@ -112,7 +112,7 @@ function makeRequest(overrides: Partial<CareRequest> = {}): CareRequest {
   return {
     id: 'req-test',
     recipientId: 'rcp-1',
-    requestType: REQUEST_TYPE.RIDING,
+    requestType: REQUEST_TYPE.HOSPITAL_RIDE,
     desiredAt: '2026-08-10T09:00:00+09:00',
     isTimeFixed: false,
     status: REQUEST_STATUS.REQUESTED,
@@ -140,7 +140,7 @@ function makeRecipient(overrides: Partial<Recipient> = {}): Recipient {
   return {
     id: 'rcp-test',
     name: '테스트대상자',
-    type: RECIPIENT_TYPE.ELDER,
+    type: RECIPIENT_TYPE.ELDERLY,
     region: '청도읍',
     addressDetail: '청도읍 어딘가',
     createdAt: '2026-08-01T09:00:00+09:00',

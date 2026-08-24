@@ -64,20 +64,35 @@ Recharts / react-simple-maps / TanStack Table / Zod
 - 요청하지 않은 파일 대량 생성
 - 한 번에 여러 화면 만들기. **한 세션에 한 화면**
 
-## 아직 확정되지 않은 것
+## 상태값 — 계약서 기준
 
-`lib/status.ts` 에 🟨로 표시된 값들은 백엔드 담당자 확답 전 임시값이다.
-확답이 오면 **그 파일만 고친다.** 화면 코드는 손대지 않는다.
+근거: **「다로리 요청자/돌봄매니저 MVP API 계약서 v1.0.0-draft」 5장**
 
-- 일지 상태: `pending` / `approved` / `rejected` (임시)
-- 출금 상태: `requested` / `paid` / `rejected` (임시)
-- 정산 상태: `calculated` / `approved` (임시)
-- 매니저 비활성: `inactive` (임시)
+⚠️ **모든 열거형은 SCREAMING_SNAKE_CASE 대문자다.** 소문자 값을 쓰면 백엔드와 안 맞는다.
+
+🟩 **계약 확정** (백엔드가 실제로 내려주는 값. 절대 바꾸지 말 것)
+- 역할: `ADMIN` / `HELPER` / `REQUESTER`
+- 매니저: `APPLIED` / `EDUCATED` / `ACTIVE` / `INACTIVE`
+- 요청 상태: `REQUESTED` / `PROPOSED` / `CONFIRMED` / `COMPLETED` / `CANCELLED`
+- 대상자 유형: `ELDERLY` / `CHILD` (어르신은 ELDER 가 아니라 **ELDERLY**)
+- 요청 유형: `HOSPITAL_RIDE` / `COMPANIONSHIP` / `HOME_HELP` / `MEAL_SUPPORT` / `OTHER`
+- 읍·면: **문자열 이름** (`"청도읍"`). 법정동 코드 아님
+
+🟨 **관리자 계약 대기** — 계약서 14장에서 관리자 기능은 범위 제외라 아직 확정 전.
+같은 대문자 규약을 따라 임시로 정해뒀다. 확답이 오면 `lib/status.ts` 만 고친다.
+- 일지 상태: `PENDING` / `APPROVED` / `REJECTED`
+- 출금 상태: `REQUESTED` / `PAID` / `REJECTED`
+- 정산 상태: `CALCULATED` / `APPROVED`
 - 활동 유형이 3종인지 5종인지 미확정
 
-확정된 것 (기획서 원문 명시, 바꾸지 말 것):
-- 매니저: `applied` / `educated` / `active`
-- 요청: `requested` / `proposed` / `confirmed` / `completed` / `cancelled`
+## 백엔드 API
+
+- 로컬 기본 URL `http://localhost:4000`, 프론트는 **DB에 직접 연결하지 않는다**
+- 인증: 세션 쿠키 `darori_session` (HttpOnly). 모든 인증 요청에 `credentials: "include"`
+- 구현된 엔드포인트는 `/health`, `/auth/login`, `/auth/me`, `/auth/logout` 뿐
+- **관리자용 엔드포인트는 아직 계약 자체가 없다.** 그때까지 `lib/data/mock.ts` 유지
+- 오류 분기는 영어 `message` 가 아니라 `code` 와 `reason` 으로 한다
+- 시간은 RFC3339 UTC로 오고, 화면에 그릴 때 Asia/Seoul 로 변환한다
 
 ## 디자인
 
@@ -90,7 +105,18 @@ Recharts / react-simple-maps / TanStack Table / Zod
 
 ## 용어
 
-관리자 = admin (다로리인 운영 담당자) / 매니저 = helper / 요청자 = recipient
+계약서 3.2 기준. **요청자와 대상자는 다른 개념이다.**
+
+| 한국어 | 코드 | 뜻 |
+|---|---|---|
+| 관리자 | `ADMIN` | 다로리인 운영 담당자. 이 웹의 사용자 |
+| 돌봄매니저 | `HELPER` | 실제 돌봄 활동을 하는 지역 주민 |
+| **요청자** | `REQUESTER` | 돌봄 요청을 제출하는 **로그인 계정** (보호자 등) |
+| **대상자** | `Recipient` 타입 | 실제 돌봄을 **받는 사람** (어르신·아동) |
+
+예전에 요청자를 `recipient` 라고 불렀는데 계약서 기준으로 `REQUESTER` 가 맞다.
+`Recipient` 타입은 대상자를 가리키므로 헷갈리지 말 것.
+
 서비스명은 **다로리(DAROLI)**. 포로리·DOUM은 옛 이름이므로 쓰지 않는다.
 
 ## 현재 상태
@@ -98,7 +124,12 @@ Recharts / react-simple-maps / TanStack Table / Zod
 기획서 2장의 10개 화면 전부 구현 완료 (Phase 1~9). **Phase 13·14 완료** — 대시보드(`/`)를
 3탭 구조에서 액션 큐 중심 단일 화면으로 재설계했고(`docs/대시보드_재설계.md` B안, 팀 승인됨),
 지도(`components/region-map.tsx`)는 `/managers` 화면으로 이동해 "수요 보기/매니저 보기" 토글을
-추가했다 (커밋 `726adac`). **진행 중: Phase 15** — 코드와 문서를 맞추는 작업.
+추가했다 (커밋 `726adac`).
+
+**Phase 16 진행 중** — 백엔드 API 계약서를 받아 상태값을 전부 대문자로 전환했다.
+`lib/status.ts`·`lib/data/mock.ts`·`app/recipients/page.tsx`·`lib/calc.test.ts` 수정.
+관리자용 API 계약은 아직 없어 DB 연결(Phase 17~18)은 시작 못 한다.
+
 상세 로드맵은 `다음단계.md`·`docs/운영투입_로드맵.md` 참고.
 
 <!-- BEGIN:nextjs-agent-rules -->
