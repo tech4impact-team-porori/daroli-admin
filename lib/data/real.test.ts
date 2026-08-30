@@ -40,9 +40,9 @@ describe("realDataSource adapter", () => {
           activeHelperCount: 5,
           helperPayments: [
             {
-              helperId: "h-1",
-              helperName: "김도움",
-              isInactive: false,
+              id: "h-1",
+              name: "김도움",
+              status: "ACTIVE",
               monthlyApprovedLogs: 10,
               accumulatedApprovedSettlement: 100000,
               accumulatedPaidWithdrawal: 50000,
@@ -55,8 +55,8 @@ describe("realDataSource adapter", () => {
               recipientCount: 12,
               activeHelperCount: 4,
               assignedHelperCount: 4,
-              monthlyLogCount: 20,
-              isShortage: false,
+              monthlyActivityCount: 20,
+              isUnderstaffed: false,
             },
           ],
         };
@@ -64,13 +64,21 @@ describe("realDataSource adapter", () => {
       if (url.includes("/admin/dashboard/recipients")) {
         return {
           month: "2026-08",
-          recipientCount: 20,
-          elderlyCount: 15,
-          childCount: 5,
-          monthlyActivityCount: 25,
-          recentMonthsTrend: [{ month: "2026-08", submitted: 25, approved: 20 }],
+          recipientCounts: {
+            total: 20,
+            elderly: 15,
+            child: 5,
+          },
+          monthlyActivity: {
+            total: 25,
+            submitted: 25,
+            approved: 20,
+          },
+          activityTrend: [{ month: "2026-08", submittedCount: 25, approvedCount: 20 }],
+          regions: [],
         };
       }
+
       if (url.includes("/admin/activity-logs")) {
         return {
           items: [

@@ -1,5 +1,8 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export function getApiBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export class ApiError extends Error {
   constructor(
@@ -14,16 +17,20 @@ export class ApiError extends Error {
 }
 
 export function createRequestOptions(init: RequestInit = {}): RequestInit {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...((init.headers as Record<string, string>) || {}),
+  };
+  if (init.body) {
+    headers["Content-Type"] = "application/json";
+  }
   return {
     ...init,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(init.headers || {}),
-    },
+    headers,
   };
 }
+
 
 export async function parseApiError(json: unknown, status = 400): Promise<ApiError> {
   const errorObj = (json && typeof json === "object" && "error" in json ? (json as { error: Record<string, unknown> }).error : json) as Record<string, unknown> | null;
@@ -34,8 +41,10 @@ export async function parseApiError(json: unknown, status = 400): Promise<ApiErr
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const url = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
+  const baseUrl = getApiBaseUrl();
+  const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
   const requestOptions = createRequestOptions(options);
+
 
   const res = await fetch(url, requestOptions);
   let data: unknown = null;

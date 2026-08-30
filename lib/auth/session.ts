@@ -1,4 +1,4 @@
-import { API_BASE_URL, ApiError, createRequestOptions, parseApiError } from "../api/client";
+import { ApiError, createRequestOptions, getApiBaseUrl, parseApiError } from "../api/client";
 
 export interface AdminUser {
   id: string;
@@ -15,7 +15,7 @@ export interface SessionResponse {
 export async function requireAdminSession(
   fetcher: typeof fetch = fetch,
 ): Promise<SessionResponse> {
-  const url = `${API_BASE_URL}/auth/me`;
+  const url = `${getApiBaseUrl()}/auth/me`;
   const res = await fetcher(url, createRequestOptions({ method: "GET" }));
 
   let data: unknown = null;
@@ -46,7 +46,7 @@ export async function loginAdmin(
   password: string,
   fetcher: typeof fetch = fetch,
 ): Promise<AdminUser> {
-  const url = `${API_BASE_URL}/auth/login`;
+  const url = `${getApiBaseUrl()}/auth/login`;
   const res = await fetcher(
     url,
     createRequestOptions({
@@ -70,7 +70,7 @@ export async function loginAdmin(
   if (!sessionData?.user || sessionData.user.role !== "ADMIN") {
     // Immediately log out if non-admin
     try {
-      await fetcher(`${API_BASE_URL}/auth/logout`, createRequestOptions({ method: "POST" }));
+      await fetcher(`${getApiBaseUrl()}/auth/logout`, createRequestOptions({ method: "POST" }));
     } catch {
       // Ignore logout error
     }
@@ -84,8 +84,8 @@ export async function loginAdmin(
   return sessionData.user;
 }
 
-
 export async function logoutAdmin(fetcher: typeof fetch = fetch): Promise<void> {
-  const url = `${API_BASE_URL}/auth/logout`;
+  const url = `${getApiBaseUrl()}/auth/logout`;
   await fetcher(url, createRequestOptions({ method: "POST" }));
 }
+

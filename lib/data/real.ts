@@ -45,38 +45,47 @@ interface ApiBudgetDashboard {
   };
 }
 
-interface ApiHelperPayment {
-  helperId: string;
-  helperName: string;
-  isInactive: boolean;
-  monthlyApprovedLogs: number;
-  accumulatedApprovedSettlement: number;
-  accumulatedPaidWithdrawal: number;
-  withdrawableBalance: number;
-}
-
-interface ApiRegionSummary {
-  region: string;
-  recipientCount: number;
-  activeHelperCount: number;
-  assignedHelperCount: number;
-  monthlyLogCount: number;
-  isShortage: boolean;
-}
-
 interface ApiHelpersDashboard {
+
+  month: string;
   activeHelperCount: number;
-  helperPayments: ApiHelperPayment[];
-  regions: ApiRegionSummary[];
+  helperPayments: ApiHelperItem[];
+  regions: {
+    region: string;
+    activeHelperCount: number;
+    assignedHelperCount: number;
+    recipientCount: number;
+    monthlyActivityCount: number;
+    isUnderstaffed: boolean;
+  }[];
 }
 
 interface ApiRecipientsDashboard {
-  recipientCount: number;
-  elderlyCount: number;
-  childCount: number;
-  monthlyActivityCount: number;
-  recentMonthsTrend: { month: string; submitted: number; approved: number }[];
+  month: string;
+  recipientCounts: {
+    total: number;
+    elderly: number;
+    child: number;
+  };
+  monthlyActivity: {
+    total: number;
+    submitted: number;
+    approved: number;
+  };
+  activityTrend: {
+    month: string;
+    submittedCount: number;
+    approvedCount: number;
+  }[];
+  regions: {
+    region: string;
+    recipientCount: number;
+    monthlyActivityCount: number;
+    activeHelperCount: number;
+    isUnderstaffed: boolean;
+  }[];
 }
+
 
 interface ApiActivityLogItem {
   id: string;
@@ -152,17 +161,17 @@ interface ApiRecipientItem {
 
 interface ApiSettlementItem {
   id: string;
-  helperId: string;
   helper: { id: string; name: string };
   month: string;
-  approvedActivityCount: number;
+  activityCount: number;
   unitPrice: number;
-  calculatedAmount: number;
+  amount: number;
   status: "PENDING" | "APPROVED" | "PAID" | "CANCELLED";
   reviewedByUserId?: string | null;
   approvedAt?: string | null;
   createdAt: string;
 }
+
 
 interface ApiWithdrawalItem {
   id: string;
@@ -205,11 +214,12 @@ export const realDataSource: DataSource = {
       apiFetch<ApiBudgetDashboard>(`/admin/dashboard/budget?month=${yearMonth}`),
       apiFetch<ApiHelpersDashboard>(`/admin/dashboard/helpers?month=${yearMonth}`),
       apiFetch<ApiRecipientsDashboard>(`/admin/dashboard/recipients?month=${yearMonth}`),
-      apiFetch<{ items: ApiActivityLogItem[] }>(`/admin/activity-logs?status=PENDING_REVIEW&limit=100`),
-      apiFetch<{ items: ApiRequestItem[] }>(`/admin/requests?status=REQUESTED&limit=100`),
-      apiFetch<{ items: ApiHelperItem[] }>(`/admin/helpers?limit=100`),
-      apiFetch<{ items: ApiRecipientItem[] }>(`/admin/recipients?unassignedOnly=true&limit=100`),
-      apiFetch<{ items: ApiWithdrawalItem[] }>(`/admin/withdrawals?status=REQUESTED&limit=100`),
+      apiFetch<{ items: ApiActivityLogItem[] }>(`/admin/activity-logs?status=PENDING_REVIEW&limit=50`),
+      apiFetch<{ items: ApiRequestItem[] }>(`/admin/requests?status=REQUESTED&limit=50`),
+      apiFetch<{ items: ApiHelperItem[] }>(`/admin/helpers?limit=50`),
+      apiFetch<{ items: ApiRecipientItem[] }>(`/admin/recipients?unassignedOnly=true&limit=50`),
+      apiFetch<{ items: ApiWithdrawalItem[] }>(`/admin/withdrawals?status=REQUESTED&limit=50`),
+
     ]);
 
     const nowIso = new Date().toISOString();
@@ -261,16 +271,16 @@ export const realDataSource: DataSource = {
       recipientCount: r.recipientCount,
       activeManagerCount: r.activeHelperCount,
       assignedManagerCount: r.assignedHelperCount,
-      monthlyLogCount: r.monthlyLogCount,
-      isShortage: r.isShortage,
+      monthlyLogCount: r.monthlyActivityCount,
+      isShortage: r.isUnderstaffed,
     }));
 
     const shortageRegs = regions.filter((r) => r.isShortage).map((r) => r.region);
 
     const managerPayments = (helpersRes?.helperPayments || []).map((p) => ({
-      managerId: p.helperId,
-      managerName: p.helperName,
-      isRetired: p.isInactive,
+      managerId: p.id,
+      managerName: p.name,
+      isRetired: p.status === "INACTIVE",
       monthlyLogCount: p.monthlyApprovedLogs,
       approvedTotal: p.accumulatedApprovedSettlement,
       paidTotal: p.accumulatedPaidWithdrawal,
@@ -299,14 +309,14 @@ export const realDataSource: DataSource = {
       },
       activeManagerCount: helpersRes.activeHelperCount,
       managerPayments,
-      recipientCount: recipientsRes.recipientCount,
-      elderCount: recipientsRes.elderlyCount,
-      childCount: recipientsRes.childCount,
-      monthlyLogTotal: recipientsRes.monthlyActivityCount,
-      trend: (recipientsRes.recentMonthsTrend || []).map((t) => ({
+      recipientCount: recipientsRes.recipientCounts?.total ?? 0,
+      elderCount: recipientsRes.recipientCounts?.elderly ?? 0,
+      childCount: recipientsRes.recipientCounts?.child ?? 0,
+      monthlyLogTotal: recipientsRes.monthlyActivity?.total ?? 0,
+      trend: (recipientsRes.activityTrend || []).map((t) => ({
         yearMonth: t.month,
-        submitted: t.submitted,
-        approved: t.approved,
+        submitted: t.submittedCount,
+        approved: t.approvedCount,
       })),
       regions,
       actions: {
@@ -336,10 +346,11 @@ export const realDataSource: DataSource = {
       recipientCount: r.recipientCount,
       activeManagerCount: r.activeHelperCount,
       assignedManagerCount: r.assignedHelperCount,
-      monthlyLogCount: r.monthlyLogCount,
-      isShortage: r.isShortage,
+      monthlyLogCount: r.monthlyActivityCount,
+      isShortage: r.isUnderstaffed,
     }));
   },
+
 
   async listLogs(filter: LogFilter): Promise<ActivityLogCard[]> {
     const params = new URLSearchParams();
@@ -353,7 +364,7 @@ export const realDataSource: DataSource = {
       params.set("status", statusMap[filter.status] || filter.status);
     }
     if (filter.managerId) params.set("helperId", filter.managerId);
-    params.set("limit", "100");
+    params.set("limit", "50");
 
     const res = await apiFetch<{ items: ApiActivityLogItem[] }>(`/admin/activity-logs?${params.toString()}`);
     return (res?.items || []).map((l) => ({
@@ -407,17 +418,19 @@ export const realDataSource: DataSource = {
   },
 
   async listSettlements(yearMonth: YearMonth): Promise<SettlementRow[]> {
-    const res = await apiFetch<{ items: ApiSettlementItem[] }>(`/admin/settlements?month=${yearMonth}&limit=100`);
+    const res = await apiFetch<{ items: ApiSettlementItem[] }>(`/admin/settlements?month=${yearMonth}&limit=50`);
+
     return (res?.items || []).map((s) => ({
       id: s.id,
-      managerId: s.helperId,
-      managerName: s.helper?.name || "알 수 없음",
+      managerId: s.helper.id,
+      managerName: s.helper.name || "알 수 없음",
       yearMonth: s.month,
-      logCount: s.approvedActivityCount,
+      logCount: s.activityCount,
       unitPrice: s.unitPrice,
-      amount: s.calculatedAmount,
+      amount: s.amount,
       status: s.status === "PENDING" ? "CALCULATED" : "APPROVED",
       approvedBy: s.reviewedByUserId || undefined,
+
 
       approvedAt: s.approvedAt || undefined,
       createdAt: s.createdAt,
@@ -435,7 +448,7 @@ export const realDataSource: DataSource = {
   async listPayouts(status?: PayoutStatus): Promise<PayoutRow[]> {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
-    params.set("limit", "100");
+    params.set("limit", "50");
 
     const res = await apiFetch<{ items: ApiWithdrawalItem[] }>(`/admin/withdrawals?${params.toString()}`);
     return (res?.items || []).map((w) => ({
@@ -467,7 +480,7 @@ export const realDataSource: DataSource = {
     if (filter.status) params.set("status", filter.status);
     if (filter.region) params.set("region", filter.region);
     if (filter.keyword) params.set("search", filter.keyword);
-    params.set("limit", "100");
+    params.set("limit", "50");
 
     const res = await apiFetch<{ items: ApiHelperItem[] }>(`/admin/helpers?${params.toString()}`);
     return (res?.items || []).map((h) => ({
@@ -552,7 +565,7 @@ export const realDataSource: DataSource = {
     if (filter.region) params.set("region", filter.region);
     if (filter.unassignedOnly) params.set("unassignedOnly", "true");
     if (filter.keyword) params.set("search", filter.keyword);
-    params.set("limit", "100");
+    params.set("limit", "50");
 
     const res = await apiFetch<{ items: ApiRecipientItem[] }>(`/admin/recipients?${params.toString()}`);
     return (res?.items || []).map((r) => ({
@@ -641,7 +654,7 @@ export const realDataSource: DataSource = {
     const params = new URLSearchParams();
     if (filter.status) params.set("status", filter.status);
     if (filter.keyword) params.set("search", filter.keyword);
-    params.set("limit", "100");
+    params.set("limit", "50");
 
     const res = await apiFetch<{ items: ApiRequestItem[] }>(`/admin/requests?${params.toString()}`);
     return (res?.items || []).map((req) => ({
