@@ -98,5 +98,8 @@ export interface DataSource {
  *     process.env.NEXT_PUBLIC_USE_REAL_DB === 'true' ? realDataSource : mockDataSource
  */
 import { mockDataSource } from './mock'
+import { realDataSource } from './real'
 
-export const db: DataSource = mockDataSource
+export const db: DataSource =
+  process.env.NEXT_PUBLIC_USE_REAL_API === 'true' ? realDataSource : mockDataSource
+
