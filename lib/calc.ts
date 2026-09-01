@@ -317,10 +317,13 @@ export function regionFillIntensity(stat: RegionStat, allStats: RegionStat[]): n
 
 /** ₩20,000,000 — 기획서 화면 표기 방식. 표에서는 축약 금지 */
 export function formatWon(amount: Won): string {
-  return `₩${amount.toLocaleString('ko-KR')}`
+  const validAmount = Number.isFinite(amount) ? amount : 0
+  return `₩${validAmount.toLocaleString('ko-KR')}`
 }
 
 /** 12.3% */
 export function formatRate(rate: number): string {
-  return `${(rate * 100).toFixed(1)}%`
+  const validRate = Number.isFinite(rate) ? rate : 0
+  return `${(validRate * 100).toFixed(1)}%`
 }
+

@@ -209,4 +209,44 @@ describe("realDataSource adapter", () => {
     expect(postSpy).toHaveBeenCalledWith("/admin/recipients", expect.anything());
     expect(postSpy).toHaveBeenCalledWith("/admin/recipients/new-rec-id/assign-helper", expect.anything());
   });
+
+  it("maps listManagers correctly", async () => {
+    vi.spyOn(client, "apiFetch").mockResolvedValue({
+      items: [
+        {
+          id: "h-1",
+          name: "김도움",
+          email: "helper@example.com",
+          phone: "010-1234-5678",
+          status: "ACTIVE",
+          residenceRegion: "청도읍",
+          serviceRegions: ["청도읍"],
+          hasVehicle: true,
+          assignedRecipientCount: 2,
+          monthlyActivityCount: 3,
+          lifetimeActivityCount: 10,
+          approvedSettlementAmount: 100000,
+          paidWithdrawalAmount: 50000,
+          withdrawableBalance: 50000,
+          approvedAt: "2026-08-01T00:00:00Z",
+        },
+      ],
+      pageInfo: { nextCursor: null, hasMore: false },
+    });
+
+    const list = await realDataSource.listManagers({});
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      id: "h-1",
+      name: "김도움",
+      homeRegion: "청도읍",
+      recipientCount: 2,
+      monthlyLogCount: 3,
+      totalLogCount: 10,
+      approvedTotal: 100000,
+      paidTotal: 50000,
+      balance: 50000,
+    });
+  });
 });
+
