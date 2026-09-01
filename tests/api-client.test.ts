@@ -20,7 +20,7 @@ describe("Admin API client & session", () => {
     expect(err).toMatchObject({
       code: "CONFLICT",
       reason: "BUDGET_NOT_CONFIGURED",
-      message: "Budget is not set",
+      message: "활동 단가 또는 예산이 설정되지 않았습니다. 설정 페이지에서 먼저 설정해 주세요.",
     });
   });
 
