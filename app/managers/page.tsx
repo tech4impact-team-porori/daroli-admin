@@ -87,8 +87,18 @@ export default function ManagersPage() {
     try {
       await db.updateManagerStatus(manager.id, next)
       fetchManagers()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "상태 변경에 실패했습니다")
+    } catch (err: unknown) {
+      const errObj = err as { message?: string; reason?: string }
+      if (
+        errObj.reason === "HELPER_HAS_ACTIVE_DEPENDENCIES" ||
+        errObj.message?.includes("Cannot deactivate helper with active assignments or requests")
+      ) {
+        setError(
+          `담당 중인 대상자(${manager.recipientCount}명) 또는 진행 중인 돌봄 요청이 있어 비활성화할 수 없습니다. [대상자 관리](/recipients)에서 먼저 담당 매니저를 변경하거나 해제해주세요.`
+        )
+      } else {
+        setError(err instanceof Error ? err.message : "상태 변경에 실패했습니다")
+      }
     } finally {
       setActionId(null)
     }
