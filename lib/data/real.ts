@@ -640,16 +640,22 @@ export const realDataSource: DataSource = {
     }
 
     if (patch.managerId !== undefined) {
-      if (patch.managerId) {
-        await apiFetch(`/admin/recipients/${id}/assign-helper`, {
-          method: "POST",
-          body: JSON.stringify({ helperId: patch.managerId }),
-        });
-      } else {
-        await apiFetch(`/admin/recipients/${id}/unassign-helper`, {
-          method: "POST",
-          body: JSON.stringify({}),
-        });
+      const current = await apiFetch<ApiRecipientItem>(`/admin/recipients/${id}`);
+      const currentHelperId = current.assignedHelper?.id;
+
+      if (patch.managerId !== currentHelperId) {
+        if (currentHelperId) {
+          await apiFetch(`/admin/recipients/${id}/unassign-helper`, {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+        }
+        if (patch.managerId) {
+          await apiFetch(`/admin/recipients/${id}/assign-helper`, {
+            method: "POST",
+            body: JSON.stringify({ helperId: patch.managerId }),
+          });
+        }
       }
     }
   },
