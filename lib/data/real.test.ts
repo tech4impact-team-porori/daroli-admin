@@ -14,26 +14,30 @@ describe("realDataSource adapter", () => {
       if (url.includes("/admin/dashboard/budget")) {
         return {
           month: "2026-08",
+          pendingReviewCount: 1,
+          activityUnitPrice: 10000,
+          estimatedMonthlyActivityCost: 10000,
           overall: {
             totalBudget: 20000000,
-            paidTotal: 5000000,
-            approvedUnpaid: 1000000,
-            pendingEstimate: 300000,
+            paidWithdrawalAmount: 5000000,
+            approvedUnpaidSettlementAmount: 1000000,
+            pendingSettlementAmount: 300000,
             usageRate: 0.3,
-            remaining: 14000000,
-            averagePerActivity: 10000,
-            possibleActivities: 1400,
+            remainingBudget: 14000000,
+            averageActivityPayment: 10000,
+            estimatedRemainingActivityCount: 1400,
           },
           monthly: {
             month: "2026-08",
             monthlyBudget: 3000000,
-            approvedAmount: 1000000,
-            pendingAmount: 200000,
-            remaining: 2000000,
-            estimatedAmount: 1200000,
+            approvedSettlementAmount: 1000000,
+            pendingSettlementAmount: 200000,
+            remainingBudget: 2000000,
+            usageRate: 0.4,
           },
         };
       }
+
       if (url.includes("/admin/dashboard/helpers")) {
         return {
           month: "2026-08",

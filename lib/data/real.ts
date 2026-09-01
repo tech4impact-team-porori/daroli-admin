@@ -26,24 +26,29 @@ import type { DataSource } from "./index";
 
 
 interface ApiBudgetDashboard {
+  month: string;
+  pendingReviewCount: number;
+  activityUnitPrice: number | null;
+  estimatedMonthlyActivityCost: number | null;
   overall: {
-    totalBudget: number;
-    paidTotal: number;
-    approvedUnpaid: number;
-    pendingEstimate: number;
-    usageRate: number;
-    remaining: number;
-    averagePerActivity: number;
-    possibleActivities: number;
+    totalBudget: number | null;
+    paidWithdrawalAmount: number;
+    approvedUnpaidSettlementAmount: number;
+    pendingSettlementAmount: number;
+    usageRate: number | null;
+    remainingBudget: number | null;
+    averageActivityPayment: number | null;
+    estimatedRemainingActivityCount: number | null;
   };
   monthly: {
-    monthlyBudget: number;
-    approvedAmount: number;
-    pendingAmount: number;
-    remaining: number;
-    estimatedAmount: number;
+    monthlyBudget: number | null;
+    approvedSettlementAmount: number;
+    pendingSettlementAmount: number;
+    remainingBudget: number | null;
+    usageRate: number | null;
   };
 }
+
 
 interface ApiHelpersDashboard {
 
@@ -290,22 +295,22 @@ export const realDataSource: DataSource = {
     return {
       pendingLogCount: pendingLogs.length,
       budget: {
-        totalBudget: budgetRes.overall.totalBudget,
-        paidTotal: budgetRes.overall.paidTotal,
-        approvedUnpaid: budgetRes.overall.approvedUnpaid,
-        pendingEstimate: budgetRes.overall.pendingEstimate,
-        usageRate: budgetRes.overall.usageRate,
-        remaining: budgetRes.overall.remaining,
-        averagePerActivity: budgetRes.overall.averagePerActivity,
-        possibleActivities: budgetRes.overall.possibleActivities,
+        totalBudget: budgetRes.overall.totalBudget || 0,
+        paidTotal: budgetRes.overall.paidWithdrawalAmount || 0,
+        approvedUnpaid: budgetRes.overall.approvedUnpaidSettlementAmount || 0,
+        pendingEstimate: budgetRes.overall.pendingSettlementAmount || 0,
+        usageRate: budgetRes.overall.usageRate || 0,
+        remaining: budgetRes.overall.remainingBudget || 0,
+        averagePerActivity: budgetRes.overall.averageActivityPayment || 0,
+        possibleActivities: budgetRes.overall.estimatedRemainingActivityCount || 0,
       },
       monthlyBudget: {
         yearMonth,
-        assigned: budgetRes.monthly.monthlyBudget,
-        approved: budgetRes.monthly.approvedAmount,
-        calculating: budgetRes.monthly.pendingAmount,
-        remaining: budgetRes.monthly.remaining,
-        estimated: budgetRes.monthly.estimatedAmount,
+        assigned: budgetRes.monthly.monthlyBudget || 0,
+        approved: budgetRes.monthly.approvedSettlementAmount || 0,
+        calculating: budgetRes.monthly.pendingSettlementAmount || 0,
+        remaining: budgetRes.monthly.remainingBudget || 0,
+        estimated: (budgetRes.monthly.approvedSettlementAmount || 0) + (budgetRes.monthly.pendingSettlementAmount || 0),
       },
       activeManagerCount: helpersRes.activeHelperCount,
       managerPayments,
@@ -320,7 +325,7 @@ export const realDataSource: DataSource = {
       })),
       regions,
       actions: {
-        approvedUnpaid: budgetRes.overall.approvedUnpaid,
+        approvedUnpaid: budgetRes.overall.approvedUnpaidSettlementAmount || 0,
         requestedPayoutCount: requestedWithdrawals.length,
         pendingLogCount: pendingLogs.length,
         oldestPendingDays: oldestLogDays,
@@ -328,7 +333,7 @@ export const realDataSource: DataSource = {
         pendingManagerCount: appliedCount + educatedCount,
         unassignedRecipientCount: unassignedRecipients.length,
         shortageRegions: shortageRegs,
-        needsBudgetSetup: budgetRes.monthly.monthlyBudget === 0,
+        needsBudgetSetup: (budgetRes.monthly.monthlyBudget || 0) === 0,
         unpaidManagerCount: managerPayments.filter((p) => p.balance > 0).length,
         oldestRequestedPayoutDays: oldestPayoutDays,
         appliedManagerCount: appliedCount,
@@ -337,6 +342,7 @@ export const realDataSource: DataSource = {
         budgetSetupMonth: yearMonth,
       },
     };
+
   },
 
   async getRegionStats(yearMonth: YearMonth): Promise<RegionStat[]> {
