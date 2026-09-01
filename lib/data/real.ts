@@ -140,12 +140,14 @@ interface ApiHelperItem {
   serviceRegions: string[];
   hasVehicle: boolean;
   assignedRecipientCount: number;
-  monthlyApprovedLogs: number;
-  accumulatedApprovedLogs: number;
-  accumulatedApprovedSettlement: number;
-  accumulatedPaidWithdrawal: number;
+  monthlyActivityCount: number;
+  lifetimeActivityCount: number;
+  approvedSettlementAmount: number;
+  paidWithdrawalAmount: number;
   withdrawableBalance: number;
-  createdAt: string;
+  educationCompletedAt?: string | null;
+  approvedAt?: string | null;
+  createdAt?: string;
 }
 
 interface ApiRecipientItem {
@@ -286,10 +288,10 @@ export const realDataSource: DataSource = {
       managerId: p.id,
       managerName: p.name,
       isRetired: p.status === "INACTIVE",
-      monthlyLogCount: p.monthlyApprovedLogs,
-      approvedTotal: p.accumulatedApprovedSettlement,
-      paidTotal: p.accumulatedPaidWithdrawal,
-      balance: p.withdrawableBalance,
+      monthlyLogCount: p.monthlyActivityCount ?? 0,
+      approvedTotal: p.approvedSettlementAmount ?? 0,
+      paidTotal: p.paidWithdrawalAmount ?? 0,
+      balance: p.withdrawableBalance ?? 0,
     }));
 
     return {
